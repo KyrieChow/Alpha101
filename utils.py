@@ -95,14 +95,28 @@ def decay_linear(df, period=10):
     return pd.DataFrame(na_lwma, index=df.index)
 
 
-def indneutralize(x, g):
+def indneutralize(stock_data,sector_series):
     """
-    industry neutralization
-    :param x:
-    :param g: industry
-    :return:
+    Wrapper function to neutralize industry.
+    a_transform = a / sector_average(a)
+    :param sector_series: a pandas Series of which index of stock codes 
+                        and sector/industry/subindustry column contains these codes.
+    :param stock_data: a pandas DataFrame of which index of date/datetime 
+                        and columns are stock codes as the index of sector_series.
+    :return: a pandas DataFrame shape like stock_data with industry neutralization.
     """
-    raise NotImplementedError
+    #align sector_series to stock_data in case of stock_data's sparse stocks
+    inner = sector_series[stock_data.columns]
+    stock_data = stock_data.replace([-np.inf,np.inf],0).fillna(value=0)
+    trans_matrix = []
+    for stock in stock_data.columns:
+        df = inner==inner[stock]
+        df /= df.sum()
+        trans_matrix.append(df)
+    trans_matrix = pd.concat(trans_matrix,axis=1,sort=True)
+    result = pd.DataFrame(np.dot(stock_data.fillna(value=0),trans_matrix.fillna(value=0)),
+                          index=stock_data.index,columns=stock_data.columns)    
+    return (stock_data / result)
 
 
 def ts_min(df, window=10):
